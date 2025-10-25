@@ -1,0 +1,1 @@
+pyinstaller main.py --name LiuyaoReader --noconsole --onefile --icon app_idle.ico --add-data "io_parse.py;." --add-data "winops.py;." --add-data "workers.py;." --add-data "ui.py;."  --add-data "app_idle.ico;." --add-data "app_running.ico;."
