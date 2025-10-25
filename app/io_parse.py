@@ -329,7 +329,6 @@ def save_row_to_excel(row: dict, path: str, extra_params=None):
             next_seq = int(last_seq_above) + 1 if last_seq_above not in (None, "") else (write_row - 1)
         except Exception:
             next_seq = (write_row - 1)
-        row = dict(row)
         row["序号"] = next_seq
 
     # 7) 组装要写入的键值：仅对“本次要写的列”赋值，其它列完全不动（包括你手工加的列/手工写的数据）

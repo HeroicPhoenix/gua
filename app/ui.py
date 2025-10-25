@@ -147,6 +147,41 @@ class LiuyaoGUI:
         self.print_fields = ["卦象名字"]
 
     # ===== UI 工具 =====
+    def _get_available_print_fields(self):
+        fields = []
+        seen = set()
+        for name in COL_ORDER:
+            if isinstance(name, str):
+                nm = name.strip()
+                if nm and nm not in seen:
+                    fields.append(nm)
+                    seen.add(nm)
+
+        path = self.excel_var.get().strip()
+        if path and os.path.exists(path):
+            wb = None
+            try:
+                from openpyxl import load_workbook
+
+                wb = load_workbook(path, read_only=True, data_only=True)
+                ws = wb.active
+                for row in ws.iter_rows(min_row=1, max_row=1):
+                    for cell in row:
+                        val = cell.value
+                        nm = "" if val is None else str(val).strip()
+                        if nm and nm not in seen:
+                            fields.append(nm)
+                            seen.add(nm)
+                    break
+            except FileNotFoundError:
+                pass
+            except Exception as exc:
+                self.log(f"读取 Excel 列失败：{exc}")
+            finally:
+                if wb is not None:
+                    wb.close()
+        return fields
+
     def _choose_excel(self):
         path = filedialog.asksaveasfilename(
             title="选择或新建 Excel 文件",
@@ -211,8 +246,7 @@ class LiuyaoGUI:
 
         # 复选框变量
         vars_map = {}
-        # 按 COL_ORDER 原顺序显示字段
-        ordered = [c for c in COL_ORDER if isinstance(c, str) and c.strip()]
+        ordered = self._get_available_print_fields()
 
         for name in ordered:
             v = tk.BooleanVar(value=(name in self.print_fields))
