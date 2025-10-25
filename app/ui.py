@@ -369,8 +369,8 @@ class LiuyaoGUI:
             text=text,
             fg="white",
             bg="#111111",
-            font=("Microsoft YaHei UI", 28, "bold"),
-            padx=40, pady=30,
+            font=("Microsoft YaHei UI", 22, "bold"),
+            padx=20, pady=15,
             justify="center"
         )
         lbl.pack()
@@ -412,7 +412,7 @@ class LiuyaoGUI:
         ol.update_idletasks()
         sw = ol.winfo_screenwidth()
         sh = ol.winfo_screenheight()
-        w, h = int(sw * 0.6), 160
+        w, h = int(sw * 0.4), 100
         x = (sw - w) // 2
         y = int(sh * 0.12)
         ol.geometry(f"{w}x{h}+{x}+{y}")
