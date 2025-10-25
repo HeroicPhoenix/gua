@@ -3,8 +3,22 @@ import os
 import re
 import time
 import hashlib
+from typing import Optional
 from datetime import datetime
 import pandas as pd
+
+
+class ExcelWriteResult:
+    """保存写入结果：兼容布尔语义，同时带回整行快照供日志展示。"""
+
+    __slots__ = ("written", "snapshot")
+
+    def __init__(self, written: bool, snapshot: Optional[dict]):
+        self.written = bool(written)
+        self.snapshot = snapshot
+
+    def __bool__(self) -> bool:
+        return self.written
 
 
 # ===== 统一列顺序（不存在文件时按此建表；存在则按列名对齐）=====
@@ -236,6 +250,8 @@ def save_row_to_excel(row: dict, path: str, extra_params=None):
     写入位置为：'excel写入时间' 列的“第一个空行”（从第2行开始）。
     若找不到该列，则自动建表头，并从第2行开始写。
     去重逻辑：与“最后一条已写入（excel写入时间非空）”的哈希值相同则跳过。
+
+    返回：ExcelWriteResult（可当作 bool 使用，同时 snapshot 字段提供写入行的完整值）。
     """
     from openpyxl import load_workbook, Workbook
     import os
@@ -300,7 +316,7 @@ def save_row_to_excel(row: dict, path: str, extra_params=None):
     if last_filled_hash and new_hash and str(last_filled_hash).strip() == new_hash:
         print("（与上一条内容相同，跳过写入）")
         wb.save(path)  # 以防刚才有补表头/补列
-        return False
+        return ExcelWriteResult(False, None)
 
     # 5) 计算写入的“目标行号”：从第2行开始，找“excel写入时间”列的第一个空行
     #    若没有该列（极端情况），则直接用 ws.max_row+1
@@ -329,24 +345,30 @@ def save_row_to_excel(row: dict, path: str, extra_params=None):
             next_seq = int(last_seq_above) + 1 if last_seq_above not in (None, "") else (write_row - 1)
         except Exception:
             next_seq = (write_row - 1)
-        row = dict(row)
         row["序号"] = next_seq
 
-    # 7) 组装要写入的键值：仅对“本次要写的列”赋值，其它列完全不动（包括你手工加的列/手工写的数据）
+    # 7) 在写入前抓取这一行当前已有的值（包含用户预填的列），供调用方回显
+    row_snapshot = {}
+    for idx, name in enumerate(headers, start=1):
+        cell_val = ws.cell(row=write_row, column=idx).value
+        row_snapshot[name] = cell_val
+
+    # 8) 组装要写入的键值：仅对“本次要写的列”赋值，其它列完全不动（包括你手工加的列/手工写的数据）
     values = {k: ("" if v is None else v) for k, v in row.items()}
     for i, p in enumerate(extra_params, 1):
         values[f"参数{i}"] = "" if p is None else str(p)
 
-    # 8) 真正写入：仅写需要的列（按列名找位置）；其它列一个字节不碰，格式/列宽保持
+    # 9) 真正写入：仅写需要的列（按列名找位置）；其它列一个字节不碰，格式/列宽保持
     for key, v in values.items():
         j = col_idx(key)
         if j > 0:
             ws.cell(row=write_row, column=j, value=v)
+            row_snapshot[key] = v
 
-    # 9) 保存
+    # 10) 保存
     wb.save(path)
     print(f"已写入：{path}（第 {write_row} 行）")
-    return True
+    return ExcelWriteResult(True, row_snapshot)
 
 
 

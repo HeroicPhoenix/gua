@@ -232,10 +232,13 @@ class BaseWorker(threading.Thread):
 
                 # === 写入 Excel（把参数列带上）===
                 try:
-                    written = save_row_to_excel(row, self.gui.excel_var.get(), extra_params=extra_params)
+                    result = save_row_to_excel(row, self.gui.excel_var.get(), extra_params=extra_params)
                 except TypeError:
                     # 兼容旧版 save_row_to_excel(没有 extra_params)
-                    written = save_row_to_excel(row, self.gui.excel_var.get())
+                    result = save_row_to_excel(row, self.gui.excel_var.get())
+
+                row_snapshot = getattr(result, "snapshot", None)
+                written = bool(result)
 
                 if written:
                     # 组装打印文本：按界面配置的字段顺序打印
@@ -244,7 +247,10 @@ class BaseWorker(threading.Thread):
                         fields = ["卦象名字"]
                     parts = []
                     for f in fields:
-                        val = row.get(f, "")
+                        if row_snapshot is not None and f in row_snapshot:
+                            val = row_snapshot.get(f, "")
+                        else:
+                            val = row.get(f, "")
                         s = "" if val is None else str(val).strip()
                         parts.append(f"{f}：{s}")
 
